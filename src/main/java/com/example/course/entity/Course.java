@@ -16,7 +16,7 @@ public class Course {
 	private String name;
 
 	@Column(name = "weekday")
-	private String weekday;
+	private int weekday;
 
 	@Column(name = "start_time")
 	private int startTime;
@@ -31,7 +31,7 @@ public class Course {
 
 	}
 
-	public Course(String code, String name, String weekday, int startTime, int endTime, int credits) {
+	public Course(String code, String name, int weekday, int startTime, int endTime, int credits) {
 		this.code = code;
 		this.name = name;
 		this.weekday = weekday;
@@ -56,11 +56,11 @@ public class Course {
 		this.name = name;
 	}
 
-	public String getWeekday() {
+	public int getWeekday() {
 		return weekday;
 	}
 
-	public void setWeekday(String weekday) {
+	public void setWeekday(int weekday) {
 		this.weekday = weekday;
 	}
 
