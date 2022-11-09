@@ -75,12 +75,12 @@ public class CourseServiceImpl implements CourseService {
 //						System.out.println("String item : " + "-" + item + "-");
 						codeSet.add(item.trim());
 					} else if (item.trim() == " ") {
-						System.out.println("ERROR. String item : " + "-" + item + "-");
+//						System.out.println("ERROR. String item : " + "-" + item + "-");
 					}
 
 				}
 				String stringCodeSet = codeSet.toString();
-				System.out.println("before substring -> stringCodeSet: " + stringCodeSet);
+//				System.out.println("before substring -> stringCodeSet: " + stringCodeSet);
 				String newCodeSet = stringCodeSet.substring(1, stringCodeSet.length() - 1);
 				student.setSelectedCode(newCodeSet);
 
@@ -94,10 +94,31 @@ public class CourseServiceImpl implements CourseService {
 
 		return null;
 	}
-	
+
 	@Override
 	public Student withdrawCourseCode(String id, Set<String> listCode) {
-		// TODO Auto-generated method stub
+
+		Optional<Student> idOp = studentDao.findById(id);
+		if (idOp.isPresent()) {
+			Student student = idOp.get();
+			Set<String> studentListCode = stringToSet(idOp.get().getSelectedCode());
+			String[] checkCourse = withdrawCourseCheck(listCode, studentListCode);
+
+			if (checkCourse[1].isEmpty()) {
+				student.setCredits(0);
+				student.setSelectedCode("");
+			} else {
+				if (checkCourse[0] == null && checkCourse[1] == null) {
+					System.out.println("ERROR. withdrawCourseCheck");
+				} else {
+					student.setCredits(Integer.parseInt(checkCourse[0]));
+					student.setSelectedCode(checkCourse[1].substring(1, checkCourse[1].length() - 1));
+				}
+			}
+
+			return studentDao.save(student);
+
+		}
 		return null;
 	}
 
@@ -248,6 +269,89 @@ public class CourseServiceImpl implements CourseService {
 		return null;
 	}
 
+	public Student idAndListCodeCheck(String id, Set<String> listCode) {
+		Optional<Student> idOp = studentDao.findById(id);
+		if (idOp.isPresent()) {
+			Set<String> codeSet = new HashSet<>();
+			for (String item : listCode) {
+				codeSet.add(item);
+			}
 
+			Student student = idOp.get();
+			String[] codeArray = student.getSelectedCode().split(",");
+			for (String item : codeArray) {
+				codeSet.add(item.trim());
+			}
+
+			String newCodeSet = codeSet.toString().substring(1, codeSet.toString().length() - 1);
+			student.setSelectedCode(newCodeSet);
+			return student;
+		}
+		return null;
+	}
+
+	public String[] withdrawCourseCheck(Set<String> listCode, Set<String> studentListCode) {
+		String[] message = { null, null };
+		// 確認輸入的課程代碼是否存在於 courseDB中，若存在則將其課程代碼放入 listCodeCheck
+		Set<String> listCodeCheck = new HashSet<>();
+		for (String listCodeItem : listCode) {
+			Optional<Course> courseOp = courseDao.findById(listCodeItem);
+			if (courseOp.isPresent()) {
+				listCodeCheck.add(listCodeItem);
+			}
+		}
+
+		// listCodeCheck與 studentListCode做比對。
+		// 比對後，將相同的課程代碼放入 sameListCode
+		Set<String> sameListCode = new HashSet<>();
+		for (String item : listCodeCheck) {
+			for (String studentItem : studentListCode) {
+				if (item.equalsIgnoreCase(studentItem)) {
+					sameListCode.add(item);
+				}
+			}
+		}
+		System.out.println("IMPL withdrawCourseCheck sameListCode: " + sameListCode.toString());
+
+		// 去除 studentListCode中 sameListCode的所有項目。
+		for (String item : sameListCode) {
+			studentListCode.remove(item);
+		}
+		System.out.println("IMPL withdrawCourseCheck studentListCode(removed): " + studentListCode.toString());
+
+		// studentListCode 去比對courseDB中的資料並取出，再設定 message(selectedCode & credits)
+		Set<String> newListCode = new HashSet<>();
+		int totCredits = 0;
+
+		if (!sameListCode.isEmpty() && studentListCode.isEmpty()) {
+			message[0] = String.valueOf(totCredits); // for student DB credits
+			message[1] = ""; // for student DB selectedCode
+		} else {
+			for (String listStudentCodeItem : studentListCode) {
+				Optional<Course> courseOp = courseDao.findById(listStudentCodeItem);
+				if (courseOp.isPresent()) {
+					newListCode.add(listStudentCodeItem);
+					totCredits += courseOp.get().getCredits();
+				}
+				message[0] = String.valueOf(totCredits); // for student DB credits
+				message[1] = newListCode.toString(); // for student DB selectedCode
+
+			}
+		}
+
+		System.out.println("IMPL withdrawCourseCheck TotCredits: " + message[0]);
+		System.out.println("IMPL withdrawCourseCheck StudentListCode: " + message[1]);
+
+		return message;
+	}
+
+	public Set<String> stringToSet(String stringListCode) {
+		Set<String> codeSet = new HashSet<>();
+		String[] codeArray = stringListCode.split(",");
+		for (String item : codeArray) {
+			codeSet.add(item.trim());
+		}
+		return codeSet;
+	}
 
 }

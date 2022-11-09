@@ -20,31 +20,44 @@ import com.example.course.vo.StudentRes;
 public class CourseController {
 	@Autowired
 	private CourseService courseService;
-	
-	
-	@PostMapping(value = "/api/select_course")
-	public StudentRes selectCourse(@RequestBody CourseSelectedReq req) {
+
+	@PostMapping(value = "/api/withdraw_course")
+	public StudentRes withdrawCourse(@RequestBody CourseSelectedReq req) {
 		StudentRes checkParam = checkSelectedCourseParam(req);
-		if(checkParam != null) {
+		if (checkParam != null) {
 			return checkParam;
 		}
 
-		Student newSelectedCourse = courseService.selectCourseCode(req.getId(), req.getListCode());
-		if(newSelectedCourse == null) {
+		Student newSelectedCourse = courseService.withdrawCourseCode(req.getId(), req.getListCode());
+		if (newSelectedCourse == null) {
 			return new StudentRes(CourseRtnCode.COURSE_SELECTED_FAILURE.getMessage());
 		}
 		return new StudentRes(newSelectedCourse, CourseRtnCode.SUCCESSFUL.getMessage());
 	}
-	
+
+	@PostMapping(value = "/api/select_course")
+	public StudentRes selectCourse(@RequestBody CourseSelectedReq req) {
+		StudentRes checkParam = checkSelectedCourseParam(req);
+		if (checkParam != null) {
+			return checkParam;
+		}
+
+		Student newSelectedCourse = courseService.selectCourseCode(req.getId(), req.getListCode());
+		if (newSelectedCourse == null) {
+			return new StudentRes(CourseRtnCode.COURSE_SELECTED_FAILURE.getMessage());
+		}
+		return new StudentRes(newSelectedCourse, CourseRtnCode.SUCCESSFUL.getMessage());
+	}
+
 	@PostMapping(value = "/api/add_student")
 	public StudentRes addStudent(@RequestBody StudentReq req) {
 		StudentRes checkParam = checkStudentParam(req);
-		if(checkParam != null) {
+		if (checkParam != null) {
 			return checkParam;
 		}
-		
+
 		Student newStudent = courseService.addStudent(req.getId(), req.getName());
-		if(newStudent == null) {
+		if (newStudent == null) {
 			return new StudentRes(CourseRtnCode.STUDENT_DUPLICATE.getMessage());
 		}
 		return new StudentRes(newStudent, CourseRtnCode.SUCCESSFUL.getMessage());
@@ -79,22 +92,22 @@ public class CourseController {
 		}
 		return null;
 	}
-	
+
 	private StudentRes checkStudentParam(StudentReq req) {
 		if (!StringUtils.hasText(req.getId())) {
 			return new StudentRes(CourseRtnCode.ID_REQUIRED.getMessage());
 		} else if (!StringUtils.hasText(req.getName())) {
 			return new StudentRes(CourseRtnCode.NAME_REQUIRED.getMessage());
-		} 
+		}
 		return null;
 	}
-	
+
 	private StudentRes checkSelectedCourseParam(CourseSelectedReq req) {
 		if (!StringUtils.hasText(req.getId())) {
 			return new StudentRes(CourseRtnCode.ID_REQUIRED.getMessage());
 		} else if (!StringUtils.hasText(req.getListCode().toString())) {
 			return new StudentRes(CourseRtnCode.LISTCODE_REQUIRED.getMessage());
-		} 
+		}
 		return null;
 	}
 
