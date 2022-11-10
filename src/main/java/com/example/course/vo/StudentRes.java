@@ -1,11 +1,16 @@
 package com.example.course.vo;
 
-import com.example.course.entity.Student;
+import java.util.Set;
 
+import com.example.course.entity.Course;
+import com.example.course.entity.Student;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StudentRes {
 	private String message;
 	private Student student;
-//	private Set<String> selectedCourse;
+	private Set<Course> selectedCourse;
 
 	public StudentRes() {
 
@@ -20,10 +25,10 @@ public class StudentRes {
 		this.message = message;
 	}
 
-//	public StudentRes(String message, Set<String> selectedCourse) {
-//		this.message = message;
-//		this.selectedCourse = selectedCourse;
-//	}
+	public StudentRes(Student student, Set<Course> selectedCourse) {
+		this.student = student;
+		this.selectedCourse = selectedCourse;
+	}
 
 	public String getMessage() {
 		return message;
@@ -32,7 +37,6 @@ public class StudentRes {
 	public void setMessage(String message) {
 		this.message = message;
 	}
-	
 
 	public Student getStudent() {
 		return student;
@@ -42,12 +46,12 @@ public class StudentRes {
 		this.student = student;
 	}
 
-//	public Set<String> getSelectedCourse() {
-//		return selectedCourse;
-//	}
-//
-//	public void setSelectedCourse(Set<String> selectedCourse) {
-//		this.selectedCourse = selectedCourse;
-//	}
+	public Set<Course> getSelectedCourse() {
+		return selectedCourse;
+	}
+
+	public void setSelectedCourse(Set<Course> selectedCourse) {
+		this.selectedCourse = selectedCourse;
+	}
 
 }

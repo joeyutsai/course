@@ -1,7 +1,9 @@
 package com.example.course.vo;
 
 import com.example.course.entity.Course;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CourseRes {
 	private String message;
 	private Course course;
