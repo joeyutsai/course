@@ -1,6 +1,5 @@
 package com.example.course.impl;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +13,7 @@ import com.example.course.entity.Student;
 import com.example.course.ifs.CourseService;
 import com.example.course.repository.CourseDao;
 import com.example.course.repository.StudentDao;
+import com.example.course.vo.CourseCheck;
 import com.example.course.vo.StudentRes;
 
 @Service
@@ -71,15 +71,13 @@ public class CourseServiceImpl implements CourseService {
 	public Student selectCourseCode(String id, Set<String> listCode) {
 		Optional<Student> idOp = studentDao.findById(id);
 		if (idOp.isPresent()) {
-			// check time and credits
 			Set<String> studentListCode = stringToSet(idOp.get().getSelectedCode());
-			String[] checkCourse = selectCourseCheck(listCode, studentListCode);
-			if (checkCourse[1] == null) {
-				Student student = idOp.get();
+			CourseCheck courseCheck = selectCourseCheck(listCode, studentListCode);
 
-				student.setCredits(Integer.parseInt(checkCourse[0]));
-				student.setSelectedCode(checkCourse[2]);
-				System.out.println("selectCourseCode checkCourse[2]" + checkCourse[2]);
+			if (courseCheck.getMessage() == null) {
+				Student student = idOp.get();
+				student.setCredits(courseCheck.getCredits());
+				student.setSelectedCode(courseCheck.getStudentListCodeForDB());
 
 				return studentDao.save(student);
 			}
@@ -94,23 +92,15 @@ public class CourseServiceImpl implements CourseService {
 		if (idOp.isPresent()) {
 			Student student = idOp.get();
 			Set<String> studentListCode = stringToSet(idOp.get().getSelectedCode());
-			String[] checkCourse = withdrawCourseCheck(listCode, studentListCode);
+			CourseCheck checkCourse = withdrawCourseCheck(listCode, studentListCode);
 
-			if (checkCourse[1].isEmpty()) {
-				student.setCredits(0);
-				student.setSelectedCode("");
-			} else {
-				if (checkCourse[0] == null && checkCourse[1] == null) {
-					System.out.println("ERROR. withdrawCourseCheck");
-				} else {
-					student.setCredits(Integer.parseInt(checkCourse[0]));
-					student.setSelectedCode(checkCourse[1].substring(1, checkCourse[1].length() - 1));
-				}
+			if (checkCourse.isCheckResult() == true) {
+				student.setCredits(checkCourse.getCredits());
+				student.setSelectedCode(checkCourse.getStudentListCodeForDB());
 			}
-
 			return studentDao.save(student);
-
 		}
+
 		return null;
 	}
 
@@ -133,110 +123,102 @@ public class CourseServiceImpl implements CourseService {
 		return null;
 	}
 
-	public String[] selectCourseCheck(Set<String> listCode, Set<String> studentListCode) {
-		Set<String> forDBStudentListCode = new HashSet<>();
-		List<Course> listCourse = new ArrayList<>();
-		String[] message = { null, null, null }; // {credits, courseTimeCheckMessage ,stringStudentListCode}
+	public CourseCheck selectCourseCheck(Set<String> listCode, Set<String> studentListCode) {
+		CourseCheck courseCheck = new CourseCheck();
+
+		// combine studentListCode to listCode
+		for (String item : studentListCode) {
+			listCode.add(item);
+		}
+
+		// CHECK listCode in DB, and get course from DB
+		List<Course> listCourse = courseDao.findAllById(listCode);
+
+		// SETTING courseCheck studentListCodeForDB --> get list of code from listCourse
+		Set<String> studentListCodeForDB = new HashSet<>();
+		for (Course item : listCourse) {
+			studentListCodeForDB.add(item.getCode());
+		}
+		// SETTING courseCheck studentListCodeForDB --> Set<String>studentListCodeForDB
+		// to string, and remove “[” & “]” by substring()
+		String stringListCodeForDB = studentListCodeForDB.toString();
+		courseCheck.setStudentListCodeForDB(stringListCodeForDB.substring(1, stringListCodeForDB.length() - 1));
+
+		// CHECK credits limit and SETTING courseCheck credits or message
 		int totCredits = 0;
-
-		// 將 studentListCode的 listCode設定好。
-		for (String studentListCodeItem : studentListCode) {
-			forDBStudentListCode.add(studentListCodeItem);
-		}
-		// check listCode in DB, if in DB add to forDBStudentListCode
-		List<Course> courseOp = courseDao.findAllById(listCode);
-		if (!courseOp.isEmpty()) {
-			for (Course item : courseOp) {
-				forDBStudentListCode.add(item.getCode());
-			}
-		}
-
-		// 將courseDB的資料取出(by forDBStudentListCode)
-		listCourse = courseDao.findAllById(forDBStudentListCode);
-
-		// 設定預備要回傳到 student DB的 selectedCode (substring去除“[” 和 “]”)
-		String stringCodeSet = forDBStudentListCode.toString();
-		message[2] = stringCodeSet.substring(1, stringCodeSet.length() - 1);
-
-		// credits limit
-		for (Course courseItem : listCourse) {
+		for (Course courseItem : listCourse) { // get all of the credits from listCourse
 			totCredits += courseItem.getCredits();
 		}
 		if (totCredits > 10) {
-			message[1] = "ERROR-credits";
+			courseCheck.setMessage("ERROR-credits-larger than 10");
 		} else {
-			message[0] = String.valueOf(totCredits);
+			courseCheck.setCredits(totCredits);
 
-			// course time (first check: weektime, second check: startTime and endTime)
+			// CHECK course time and SETTING courseCheck message
 			for (Course item : listCourse) {
 				for (int i = 0; i < listCourse.size(); i++) {
-					if (item.getWeekday() == listCourse.get(i).getWeekday()) {
+					if (item.getWeekday() == listCourse.get(i).getWeekday()) { // check: weekday
 
-						if (!item.getCode().equalsIgnoreCase(listCourse.get(i).getCode())) {
+						if (!item.getCode().equalsIgnoreCase(listCourse.get(i).getCode())) { // ignore the same course
+																								// comparison
 
 							if (listCourse.get(i).getStartTime() == item.getStartTime()
-									&& item.getEndTime() == listCourse.get(i).getEndTime()) {
-								message[1] = "ERROR-courseTime-sameTime";
+									&& item.getEndTime() == listCourse.get(i).getEndTime()) { // check: startTime and
+																								// endTime --> the same
+																								// time course
+								courseCheck.setMessage("ERROR-courseTime-sameTime");
 							} else if ((listCourse.get(i).getStartTime() < item.getStartTime()
 									&& item.getStartTime() < listCourse.get(i).getEndTime())
 									|| (listCourse.get(i).getStartTime() < item.getEndTime()
-											&& item.getEndTime() < listCourse.get(i).getEndTime())) {
-								message[1] = "ERROR-courseTime-inTheRangeTime";
+											&& item.getEndTime() < listCourse.get(i).getEndTime())) { // check:
+																										// startTime and
+																										// endTime -->
+																										// the course is
+																										// in the range
+																										// of time
+								courseCheck.setMessage("ERROR-courseTime-inTheRangeTime");
 							}
 						}
 					}
 				}
 			}
 		}
-		return message;
+		return courseCheck;
 	}
 
-	public String[] withdrawCourseCheck(Set<String> listCode, Set<String> studentListCode) {
-		String[] message = { null, null };
-		// 確認輸入的課程代碼是否存在於 courseDB中，若存在則將其課程代碼放入 listCodeCheck
-		Set<String> listCodeCheck = new HashSet<>();
-		List<Course> courseFromDB = courseDao.findAllById(listCode);
-		if (!courseFromDB.isEmpty()) {
-			for (Course item : courseFromDB) {
-				listCodeCheck.add(item.getCode());
-			}
-		}
+	public CourseCheck withdrawCourseCheck(Set<String> listCode, Set<String> studentListCode) {
+		CourseCheck courseCheck = new CourseCheck();
 
-		// listCodeCheck與 studentListCode做比對。
-		// 比對後，將相同的課程代碼放入 sameListCode
+		// compare listCode and studentListCode, put same code into sameListCode
 		Set<String> sameListCode = new HashSet<>();
-		for (String item : listCodeCheck) {
-			for (String studentItem : studentListCode) {
-				if (item.equalsIgnoreCase(studentItem)) {
-					sameListCode.add(item);
-				}
+		for (String item : listCode) {
+			if (studentListCode.contains(item)) {
+				sameListCode.add(item);
 			}
 		}
 
-		// 去除 studentListCode中 sameListCode的所有項目。
+		// remove code
 		for (String item : sameListCode) {
 			studentListCode.remove(item);
 		}
 
-		// studentListCode 去比對courseDB中的資料並取出，再設定 message(selectedCode & credits)
-		Set<String> newListCode = new HashSet<>();
+		// get course from DB by studentListCode
+		List<Course> courseFromDB = courseDao.findAllById(studentListCode);
+		Set<String> studentListCodeForDB = new HashSet<>();
 		int totCredits = 0;
 
-		if (!sameListCode.isEmpty() && studentListCode.isEmpty()) {
-			message[0] = String.valueOf(totCredits);
-			message[1] = "";
-		} else {
-			List<Course> courseFromDB2 = courseDao.findAllById(studentListCode);
-			if (!courseFromDB2.isEmpty()) {
-				for (Course item : courseFromDB2) {
-					newListCode.add(item.getCode());
-					totCredits += item.getCredits();
-				}
-			}
-			message[0] = String.valueOf(totCredits);
-			message[1] = newListCode.toString();
+		for (Course item : courseFromDB) {
+			studentListCodeForDB.add(item.getCode());
+			totCredits += item.getCredits();
 		}
-		return message;
+		
+		// SETTING courseCheck
+		courseCheck.setCheckResult(true);
+		courseCheck.setCredits(totCredits);
+		String stringListCodeForDB = studentListCodeForDB.toString();
+		courseCheck.setStudentListCodeForDB(stringListCodeForDB.substring(1, stringListCodeForDB.length() - 1));
+
+		return courseCheck;
 	}
 
 	public Set<String> stringToSet(String stringListCode) {
