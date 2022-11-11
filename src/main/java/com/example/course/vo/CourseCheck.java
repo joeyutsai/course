@@ -10,16 +10,6 @@ public class CourseCheck {
 
 	}
 
-//	public CourseCheck(Integer credits) {
-//		this.credits = credits;
-//	}
-//
-//	public CourseCheck(Integer credits, String message, String studentListCodeForDB) {
-//		this.credits = credits;
-//		this.message = message;
-//		this.studentListCodeForDB = studentListCodeForDB;
-//	}
-
 	public Integer getCredits() {
 		return credits;
 	}
