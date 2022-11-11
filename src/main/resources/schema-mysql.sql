@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `course2` (
+CREATE TABLE IF NOT EXISTS `course` (
   `code` varchar(10) NOT NULL,
   `name` varchar(20) DEFAULT NULL,
   `weekday` int DEFAULT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `course2` (
   PRIMARY KEY (`code`)
 );
 
-CREATE TABLE IF NOT EXISTS `student2` (
+CREATE TABLE IF NOT EXISTS `student` (
   `id` varchar(10) NOT NULL,
   `name` varchar(20) DEFAULT NULL,
   `selected_code` varchar(100) DEFAULT NULL,
